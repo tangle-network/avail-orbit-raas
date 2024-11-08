@@ -58,7 +58,6 @@ impl OrbitDocker {
 
     pub async fn start_container(
         &mut self,
-        config_dir: &Path,
         ports: &[(u16, u16)],          // (host_port, container_port)
         volumes: &[(PathBuf, String)], // (host_path, container_path)
     ) -> Result<()> {

@@ -1,3 +1,4 @@
+use alloy_primitives::Address;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -5,6 +6,7 @@ use std::path::PathBuf;
 pub struct OrbitConfig {
     pub chain_id: u64,
     pub chain_name: String,
+    pub creator_address: Address,
     pub private_key: String,
     pub rollup_config: RollupConfig,
     pub node_config: NodeConfig,
@@ -18,6 +20,7 @@ impl Default for OrbitConfig {
         Self {
             chain_id: 20121999,
             chain_name: "Avail-Orbit-Testnet".to_string(),
+            creator_address: Address::default(),
             private_key: "".to_string(), // Must be provided by user
             rollup_config: RollupConfig {
                 confirm_period_blocks: 150,
@@ -146,20 +149,20 @@ impl Default for OrbitConfig {
                 parent_chain_id: 421614, // Arbitrum Sepolia
                 parent_chain_node_url: "https://sepolia-rollup.arbitrum.io/rpc".to_string(),
                 // Contract addresses for Arbitrum Sepolia
-                utils: "0xB11EB62DD2B352886A4530A9106fE427844D515f".to_string(),
-                rollup: "0xd30eCcf27A6f351EfA4fc9D17e7ec20354309aE3".to_string(),
-                inbox: "0x4512e40a1ec8555f9e93E3B6a06af60F13538087".to_string(),
-                native_token: "0x0000000000000000000000000000000000000000".to_string(),
-                outbox: "0x2209755fA3470ED1AFFB4407d1e3B1f7dFC13ce9".to_string(),
-                rollup_event_inbox: "0x1e58240B2D769de25B4811354819C901317D0894".to_string(),
-                challenge_manager: "0xfC5BbC40d24EcD6FcC247EfFDc87E7D074E9B67D".to_string(),
-                admin_proxy: "0xf488b25e6736Ed74E8d37EA434892129E4d62E3B".to_string(),
-                sequencer_inbox: "0xD15347309854F1290c9a382ea2719AB5462c7719".to_string(),
-                bridge: "0xC83ee8e28B7b258f41aF8ef4279c02f901288029".to_string(),
-                upgrade_executor: "0x805bB07B88dDA56030eC48644E0C276e2e5E3949".to_string(),
-                validator_utils: "0xB11EB62DD2B352886A4530A9106fE427844D515f".to_string(),
-                validator_wallet_creator: "0xEb9885B6c0e117D339F47585cC06a2765AaE2E0b".to_string(),
-                deployed_at_block_number: 11274529,
+                utils: None,
+                rollup: None,
+                inbox: None,
+                native_token: None,
+                outbox: None,
+                rollup_event_inbox: None,
+                challenge_manager: None,
+                admin_proxy: None,
+                sequencer_inbox: None,
+                bridge: None,
+                upgrade_executor: None,
+                validator_utils: None,
+                validator_wallet_creator: None,
+                deployed_at_block_number: None,
             },
             avail_config: AvailConfig {
                 seed: "".to_string(), // Must be provided by user
@@ -326,20 +329,20 @@ pub struct OrbitSetupConfig {
     pub min_l2_base_fee: u64,
     pub parent_chain_id: u64,
     pub parent_chain_node_url: String,
-    pub utils: String,
-    pub rollup: String,
-    pub inbox: String,
-    pub native_token: String,
-    pub outbox: String,
-    pub rollup_event_inbox: String,
-    pub challenge_manager: String,
-    pub admin_proxy: String,
-    pub sequencer_inbox: String,
-    pub bridge: String,
-    pub upgrade_executor: String,
-    pub validator_utils: String,
-    pub validator_wallet_creator: String,
-    pub deployed_at_block_number: u64,
+    pub utils: Option<String>,
+    pub rollup: Option<String>,
+    pub inbox: Option<String>,
+    pub native_token: Option<String>,
+    pub outbox: Option<String>,
+    pub rollup_event_inbox: Option<String>,
+    pub challenge_manager: Option<String>,
+    pub admin_proxy: Option<String>,
+    pub sequencer_inbox: Option<String>,
+    pub bridge: Option<String>,
+    pub upgrade_executor: Option<String>,
+    pub validator_utils: Option<String>,
+    pub validator_wallet_creator: Option<String>,
+    pub deployed_at_block_number: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -356,6 +359,7 @@ impl OrbitConfig {
     pub fn new(
         chain_id: u64,
         chain_name: impl Into<String>,
+        creator_address: Address,
         private_key: impl Into<String>,
         avail_config: AvailConfig,
         working_dir: impl Into<PathBuf>,
@@ -368,6 +372,7 @@ impl OrbitConfig {
             rollup_config: RollupConfig::default(chain_id),
             node_config: NodeConfig::default(),
             orbit_setup_config: OrbitSetupConfig::default(chain_id, &chain_name),
+            creator_address,
             avail_config,
             working_dir: working_dir.into(),
         }
@@ -485,20 +490,22 @@ impl OrbitSetupConfig {
             min_l2_base_fee: 100000000,
             parent_chain_id: 421614,
             parent_chain_node_url: "https://sepolia-rollup.arbitrum.io/rpc".to_string(),
-            utils: "0xB11EB62DD2B352886A4530A9106fE427844D515f".to_string(),
-            rollup: "0xd30eCcf27A6f351EfA4fc9D17e7ec20354309aE3".to_string(),
-            inbox: "0x4512e40a1ec8555f9e93E3B6a06af60F13538087".to_string(),
-            native_token: "0x0000000000000000000000000000000000000000".to_string(),
-            outbox: "0x2209755fA3470ED1AFFB4407d1e3B1f7dFC13ce9".to_string(),
-            rollup_event_inbox: "0x1e58240B2D769de25B4811354819C901317D0894".to_string(),
-            challenge_manager: "0xfC5BbC40d24EcD6FcC247EfFDc87E7D074E9B67D".to_string(),
-            admin_proxy: "0xf488b25e6736Ed74E8d37EA434892129E4d62E3B".to_string(),
-            sequencer_inbox: "0xD15347309854F1290c9a382ea2719AB5462c7719".to_string(),
-            bridge: "0xC83ee8e28B7b258f41aF8ef4279c02f901288029".to_string(),
-            upgrade_executor: "0x805bB07B88dDA56030eC48644E0C276e2e5E3949".to_string(),
-            validator_utils: "0xB11EB62DD2B352886A4530A9106fE427844D515f".to_string(),
-            validator_wallet_creator: "0xEb9885B6c0e117D339F47585cC06a2765AaE2E0b".to_string(),
-            deployed_at_block_number: 11274529,
+            utils: Some("0xB11EB62DD2B352886A4530A9106fE427844D515f".to_string()),
+            rollup: Some("0xd30eCcf27A6f351EfA4fc9D17e7ec20354309aE3".to_string()),
+            inbox: Some("0x4512e40a1ec8555f9e93E3B6a06af60F13538087".to_string()),
+            native_token: Some("0x0000000000000000000000000000000000000000".to_string()),
+            outbox: Some("0x2209755fA3470ED1AFFB4407d1e3B1f7dFC13ce9".to_string()),
+            rollup_event_inbox: Some("0x1e58240B2D769de25B4811354819C901317D0894".to_string()),
+            challenge_manager: Some("0xfC5BbC40d24EcD6FcC247EfFDc87E7D074E9B67D".to_string()),
+            admin_proxy: Some("0xf488b25e6736Ed74E8d37EA434892129E4d62E3B".to_string()),
+            sequencer_inbox: Some("0xD15347309854F1290c9a382ea2719AB5462c7719".to_string()),
+            bridge: Some("0xC83ee8e28B7b258f41aF8ef4279c02f901288029".to_string()),
+            upgrade_executor: Some("0x805bB07B88dDA56030eC48644E0C276e2e5E3949".to_string()),
+            validator_utils: Some("0xB11EB62DD2B352886A4530A9106fE427844D515f".to_string()),
+            validator_wallet_creator: Some(
+                "0xEb9885B6c0e117D339F47585cC06a2765AaE2E0b".to_string(),
+            ),
+            deployed_at_block_number: Some(11274529),
         }
     }
 }

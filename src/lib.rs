@@ -3,7 +3,6 @@ pub mod deployments;
 pub mod docker;
 pub mod error;
 pub mod jobs;
-pub mod tasks;
 
 pub use config::*;
 pub use docker::*;

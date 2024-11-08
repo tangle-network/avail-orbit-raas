@@ -1,6 +1,6 @@
 use crate::{run_and_focus_multiple, OrbitConfig, OrbitError, Result};
 use gadget_sdk::executor::process::manager::GadgetProcessManager;
-use serde_json::json;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 
@@ -74,11 +74,10 @@ impl OrbitDeployment {
             .await
             .map_err(|e| OrbitError::Command(format!("Failed to setup nitro-contracts: {}", e)))?;
 
-        // Create .env file
+        // Create .env file and set the Rollup Creator Address
         let env_content = format!(
             "ROLLUP_CREATOR_ADDRESS=\"{}\"\nDEVNET_PRIVKEY=\"{}\"",
-            "0xE917553b67f630C3982236B6A1d7844B1021B909", // Arbitrum Sepolia Rollup Creator
-            self.config.private_key
+            self.config.creator_address, self.config.private_key
         );
         fs::write(nitro_contracts_dir.join(".env"), env_content).await?;
 
@@ -94,15 +93,61 @@ impl OrbitDeployment {
         let cd_cmd = format!("cd {}", nitro_contracts_dir.display());
         let commands = vec![
             ("cd_contracts", cd_cmd.as_str()),
+            ("build_forge_yul", "yarn build:forge:yul"),
             (
                 "deploy_rollup",
                 "yarn run deploy-eth-rollup --network arbSepolia",
             ),
         ];
 
-        run_and_focus_multiple(&mut self.manager, commands)
+        let output: HashMap<String, String> = run_and_focus_multiple(&mut self.manager, commands)
             .await
             .map_err(|e| OrbitError::Command(format!("Failed to deploy contracts: {}", e)))?;
+
+        // Helper closure to extract address from output
+        let extract_address = |pattern: &str| {
+            output.get("deploy_rollup").and_then(|out| {
+                out.lines()
+                    .find(|line| line.contains(pattern))
+                    .and_then(|line| line.split_whitespace().last())
+                    .map(String::from)
+            })
+        };
+
+        // Extract all contract addresses
+        let rollup = extract_address("RollupProxy Contract created at address:");
+        let inbox = extract_address("Inbox (proxy) Contract created at address:");
+        let outbox = extract_address("Outbox (proxy) Contract created at address:");
+        let rollup_event_inbox =
+            extract_address("rollupEventInbox (proxy) Contract created at address:");
+        let challenge_manager =
+            extract_address("challengeManager (proxy) Contract created at address:");
+        let admin_proxy = extract_address("AdminProxy Contract created at address:");
+        let sequencer_inbox = extract_address("SequencerInbox (proxy) created at address:");
+        let bridge = extract_address("Bridge (proxy) Contract created at address:");
+        let validator_utils = extract_address("ValidatorUtils Contract created at address:");
+        let validator_wallet_creator =
+            extract_address("ValidatorWalletCreator Contract created at address:");
+
+        let deployed_block_number = output.get("deploy_rollup").and_then(|out| {
+            out.lines()
+                .find(|line| line.contains("All deployed at block number:"))
+                .and_then(|line| line.split_whitespace().last())
+                .and_then(|num| num.parse::<u64>().ok())
+        });
+
+        // Update config with extracted contract addresses
+        self.config.orbit_setup_config.rollup = rollup;
+        self.config.orbit_setup_config.inbox = inbox;
+        self.config.orbit_setup_config.outbox = outbox;
+        self.config.orbit_setup_config.rollup_event_inbox = rollup_event_inbox;
+        self.config.orbit_setup_config.challenge_manager = challenge_manager;
+        self.config.orbit_setup_config.admin_proxy = admin_proxy;
+        self.config.orbit_setup_config.sequencer_inbox = sequencer_inbox;
+        self.config.orbit_setup_config.bridge = bridge;
+        self.config.orbit_setup_config.validator_utils = validator_utils;
+        self.config.orbit_setup_config.validator_wallet_creator = validator_wallet_creator;
+        self.config.orbit_setup_config.deployed_at_block_number = deployed_block_number;
 
         Ok(())
     }
@@ -114,7 +159,11 @@ impl OrbitDeployment {
             orbit_script_dir.display()
         );
 
-        let commands = vec![("clone_setup", clone_cmd.as_str())];
+        let cd_cmd = format!("cd {}", orbit_script_dir.display());
+        let commands = vec![
+            ("clone_setup", clone_cmd.as_str()),
+            ("cd_setup", cd_cmd.as_str()),
+        ];
 
         run_and_focus_multiple(&mut self.manager, commands)
             .await
@@ -129,13 +178,7 @@ impl OrbitDeployment {
     }
 
     async fn start_chain(&mut self) -> Result<()> {
-        let orbit_script_dir = self.working_dir.join("orbit-setup-script");
-        let cd_cmd = format!("cd {}", orbit_script_dir.display());
-
-        let commands = vec![
-            ("cd_setup", cd_cmd.as_str()),
-            ("start_chain", "docker-compose up -d"),
-        ];
+        let commands = vec![("start_chain", "docker-compose up -d")];
 
         run_and_focus_multiple(&mut self.manager, commands)
             .await
@@ -145,143 +188,335 @@ impl OrbitDeployment {
     }
 
     async fn create_config_ts(&self, dir: &Path) -> Result<()> {
-        let config_content = format!(
-            r#"
-            const config = {{
-                rollupConfig: {{
-                    confirmPeriodBlocks: ethers.BigNumber.from('{}'),
-                    extraChallengeTimeBlocks: ethers.BigNumber.from('{}'),
-                    stakeToken: '{}',
-                    baseStake: ethers.utils.parseEther('{}'),
-                    wasmModuleRoot: '{}',
-                    owner: '{}',
-                    loserStakeEscrow: '{}',
-                    chainId: ethers.BigNumber.from('{}'),
-                    chainConfig: '{}',
-                    genesisBlockNum: ethers.BigNumber.from('{}'),
-                    sequencerInboxMaxTimeVariation: {{
-                        delayBlocks: ethers.BigNumber.from('{}'),
-                        futureBlocks: ethers.BigNumber.from('{}'),
-                        delaySeconds: ethers.BigNumber.from('{}'),
-                        futureSeconds: ethers.BigNumber.from('{}'),
-                    }},
-                }},
-                validators: {},
-                batchPosters: {},
-                batchPosterManager: '{}',
-            }};
-            
-            export default config;
-            "#,
-            self.config.rollup_config.confirm_period_blocks,
-            self.config.rollup_config.extra_challenge_time_blocks,
-            self.config.rollup_config.stake_token,
-            self.config.rollup_config.base_stake,
-            self.config.rollup_config.wasm_module_root,
-            self.config.rollup_config.owner,
-            self.config.rollup_config.loser_stake_escrow,
-            self.config.rollup_config.chain_id,
-            self.config.rollup_config.chain_config,
-            self.config.rollup_config.genesis_block_num,
-            self.config
-                .rollup_config
-                .sequencer_inbox_max_time_variation
-                .delay_blocks,
-            self.config
-                .rollup_config
-                .sequencer_inbox_max_time_variation
-                .future_blocks,
-            self.config
-                .rollup_config
-                .sequencer_inbox_max_time_variation
-                .delay_seconds,
-            self.config
-                .rollup_config
-                .sequencer_inbox_max_time_variation
-                .future_seconds,
-            serde_json::to_string(&self.config.rollup_config.validators)?,
-            serde_json::to_string(&self.config.rollup_config.batch_posters)?,
-            self.config.rollup_config.batch_poster_manager,
-        );
+        const CONFIG_TS_TEMPLATE: &str = include_str!("templates/config.ts.template");
+
+        let config_content = CONFIG_TS_TEMPLATE
+            .replace(
+                "${confirm_period_blocks}",
+                &self.config.rollup_config.confirm_period_blocks.to_string(),
+            )
+            .replace(
+                "${extra_challenge_time_blocks}",
+                &self
+                    .config
+                    .rollup_config
+                    .extra_challenge_time_blocks
+                    .to_string(),
+            )
+            .replace("${base_stake}", &self.config.rollup_config.base_stake)
+            .replace(
+                "${wasm_module_root}",
+                &self.config.rollup_config.wasm_module_root,
+            )
+            .replace("${owner}", &self.config.rollup_config.owner)
+            .replace(
+                "${chain_id}",
+                &self.config.rollup_config.chain_id.to_string(),
+            )
+            .replace("${chain_config}", &self.config.rollup_config.chain_config)
+            .replace(
+                "${genesis_block_num}",
+                &self.config.rollup_config.genesis_block_num.to_string(),
+            )
+            .replace(
+                "${delay_blocks}",
+                &self
+                    .config
+                    .rollup_config
+                    .sequencer_inbox_max_time_variation
+                    .delay_blocks
+                    .to_string(),
+            )
+            .replace(
+                "${future_blocks}",
+                &self
+                    .config
+                    .rollup_config
+                    .sequencer_inbox_max_time_variation
+                    .future_blocks
+                    .to_string(),
+            )
+            .replace(
+                "${delay_seconds}",
+                &self
+                    .config
+                    .rollup_config
+                    .sequencer_inbox_max_time_variation
+                    .delay_seconds
+                    .to_string(),
+            )
+            .replace(
+                "${future_seconds}",
+                &self
+                    .config
+                    .rollup_config
+                    .sequencer_inbox_max_time_variation
+                    .future_seconds
+                    .to_string(),
+            )
+            .replace("${validator_1}", &self.config.rollup_config.validators[0])
+            .replace("${validator_2}", &self.config.rollup_config.validators[1])
+            .replace(
+                "${batch_poster}",
+                &self.config.rollup_config.batch_poster_manager,
+            );
 
         fs::write(dir.join("scripts/config.ts"), config_content).await?;
         Ok(())
     }
 
     async fn create_node_config(&self, dir: &Path) -> Result<()> {
-        let node_config = json!({
-            "chain": self.config.node_config.chain,
-            "parent-chain": self.config.node_config.parent_chain,
-            "http": self.config.node_config.http,
-            "node": self.config.node_config.node,
-            "execution": self.config.node_config.execution,
-            "metrics": self.config.node_config.metrics,
-            "pprof": self.config.node_config.pprof,
-            "persistent": self.config.node_config.persistent,
-            "validation": self.config.node_config.validation,
-        });
+        const NODE_CONFIG_TEMPLATE: &str = include_str!("templates/node_config.json.template");
 
-        fs::write(
-            dir.join("nodeConfig.json"),
-            serde_json::to_string_pretty(&node_config)?,
-        )
-        .await?;
+        let config_content = NODE_CONFIG_TEMPLATE
+            .replace("${chain_id}", &self.config.chain_id.to_string())
+            .replace("${chain_name}", &self.config.chain_name)
+            .replace(
+                "${chain_owner}",
+                &self.config.orbit_setup_config.chain_owner,
+            )
+            .replace(
+                "${bridge}",
+                self.config
+                    .orbit_setup_config
+                    .bridge
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${inbox}",
+                self.config
+                    .orbit_setup_config
+                    .inbox
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${sequencer_inbox}",
+                self.config
+                    .orbit_setup_config
+                    .sequencer_inbox
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${rollup}",
+                self.config
+                    .orbit_setup_config
+                    .rollup
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${validator_utils}",
+                self.config
+                    .orbit_setup_config
+                    .validator_utils
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${validator_wallet_creator}",
+                self.config
+                    .orbit_setup_config
+                    .validator_wallet_creator
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${deployed_at}",
+                &self
+                    .config
+                    .orbit_setup_config
+                    .deployed_at_block_number
+                    .unwrap_or(0)
+                    .to_string(),
+            )
+            .replace("${private_key}", &self.config.private_key)
+            .replace("${avail_seed}", &self.config.avail_config.seed)
+            .replace(
+                "${avail_app_id}",
+                &self.config.avail_config.app_id.to_string(),
+            )
+            .replace(
+                "${arb_sepolia_rpc}",
+                &self.config.avail_config.arb_sepolia_rpc,
+            );
 
+        fs::write(dir.join("config/nodeConfig.json"), config_content).await?;
         Ok(())
     }
 
     async fn create_orbit_setup_config(&self, dir: &Path) -> Result<()> {
-        let orbit_config = json!({
-            "network_fee_receiver": self.config.orbit_setup_config.network_fee_receiver,
-            "infrastructure_fee_collector": self.config.orbit_setup_config.infrastructure_fee_collector,
-            "staker": self.config.orbit_setup_config.staker,
-            "batch_poster": self.config.orbit_setup_config.batch_poster,
-            "chain_owner": self.config.orbit_setup_config.chain_owner,
-            "chain_id": self.config.orbit_setup_config.chain_id,
-            "chain_name": self.config.orbit_setup_config.chain_name,
-            "min_l2_base_fee": self.config.orbit_setup_config.min_l2_base_fee,
-            "parent_chain_id": self.config.orbit_setup_config.parent_chain_id,
-            "parent_chain_node_url": self.config.orbit_setup_config.parent_chain_node_url,
-            "utils": self.config.orbit_setup_config.utils,
-            "rollup": self.config.orbit_setup_config.rollup,
-            "inbox": self.config.orbit_setup_config.inbox,
-            "native_token": self.config.orbit_setup_config.native_token,
-            "outbox": self.config.orbit_setup_config.outbox,
-            "rollup_event_inbox": self.config.orbit_setup_config.rollup_event_inbox,
-            "challenge_manager": self.config.orbit_setup_config.challenge_manager,
-            "admin_proxy": self.config.orbit_setup_config.admin_proxy,
-            "sequencer_inbox": self.config.orbit_setup_config.sequencer_inbox,
-            "bridge": self.config.orbit_setup_config.bridge,
-            "upgrade_executor": self.config.orbit_setup_config.upgrade_executor,
-            "validator_utils": self.config.orbit_setup_config.validator_utils,
-            "validator_wallet_creator": self.config.orbit_setup_config.validator_wallet_creator,
-            "deployed_at_block_number": self.config.orbit_setup_config.deployed_at_block_number,
-        });
+        const ORBIT_SETUP_CONFIG_TEMPLATE: &str =
+            include_str!("templates/orbit_setup_config.json.template");
+
+        let config_content = ORBIT_SETUP_CONFIG_TEMPLATE
+            .replace(
+                "${network_fee_receiver}",
+                &self.config.orbit_setup_config.network_fee_receiver,
+            )
+            .replace(
+                "${infrastructure_fee_collector}",
+                &self.config.orbit_setup_config.infrastructure_fee_collector,
+            )
+            .replace("${staker}", &self.config.orbit_setup_config.staker)
+            .replace(
+                "${batch_poster}",
+                &self.config.orbit_setup_config.batch_poster,
+            )
+            .replace(
+                "${chain_owner}",
+                &self.config.orbit_setup_config.chain_owner,
+            )
+            .replace(
+                "${chain_id}",
+                &self.config.orbit_setup_config.chain_id.to_string(),
+            )
+            .replace("${chain_name}", &self.config.orbit_setup_config.chain_name)
+            .replace(
+                "${min_l2_base_fee}",
+                &self.config.orbit_setup_config.min_l2_base_fee.to_string(),
+            )
+            .replace(
+                "${utils}",
+                self.config
+                    .orbit_setup_config
+                    .utils
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${rollup}",
+                self.config
+                    .orbit_setup_config
+                    .rollup
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${inbox}",
+                self.config
+                    .orbit_setup_config
+                    .inbox
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${native_token}",
+                self.config
+                    .orbit_setup_config
+                    .native_token
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${outbox}",
+                self.config
+                    .orbit_setup_config
+                    .outbox
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${rollup_event_inbox}",
+                self.config
+                    .orbit_setup_config
+                    .rollup_event_inbox
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${challenge_manager}",
+                self.config
+                    .orbit_setup_config
+                    .challenge_manager
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${admin_proxy}",
+                self.config
+                    .orbit_setup_config
+                    .admin_proxy
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${sequencer_inbox}",
+                self.config
+                    .orbit_setup_config
+                    .sequencer_inbox
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${bridge}",
+                self.config
+                    .orbit_setup_config
+                    .bridge
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${upgrade_executor}",
+                self.config
+                    .orbit_setup_config
+                    .upgrade_executor
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${validator_utils}",
+                self.config
+                    .orbit_setup_config
+                    .validator_utils
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${validator_wallet_creator}",
+                self.config
+                    .orbit_setup_config
+                    .validator_wallet_creator
+                    .as_ref()
+                    .unwrap_or(&"".to_string()),
+            )
+            .replace(
+                "${deployed_at_block_number}",
+                &self
+                    .config
+                    .orbit_setup_config
+                    .deployed_at_block_number
+                    .unwrap_or(0)
+                    .to_string(),
+            );
 
         fs::write(
-            dir.join("orbitSetupScriptConfig.json"),
-            serde_json::to_string_pretty(&orbit_config)?,
+            dir.join("config/orbitSetupScriptConfig.json"),
+            config_content,
         )
         .await?;
-
         Ok(())
     }
 
     async fn update_docker_compose(&self, dir: &Path) -> Result<()> {
-        let docker_compose_content = r#"
-version: "3.9"
-services:
-  nitro:
-    image: availj/avail-nitro-node:v2.1.0-upstream-v3.1.1
-    ports:
-      - "8449:8449"
-    volumes:
-      - ./nodeConfig.json:/home/user/.arbitrum/nodeConfig.json
-      - ./orbitSetupScriptConfig.json:/home/user/.arbitrum/orbitSetupScriptConfig.json
-    command: --conf.file /home/user/.arbitrum/nodeConfig.json
-"#;
+        // Read the existing docker-compose.yml
+        let docker_compose_path = dir.join("docker-compose.yml");
+        let content = fs::read_to_string(&docker_compose_path).await?;
 
-        fs::write(dir.join("docker-compose.yml"), docker_compose_content).await?;
+        // Create a regex pattern to match the nitro service section
+        let nitro_regex = regex::Regex::new(r"(?ms)  nitro:\n.*?image: .*?\n").unwrap();
+
+        // Replace with our Avail nitro image
+        let updated_content = nitro_regex.replace(
+            &content,
+            "  nitro:\n    image: availj/avail-nitro-node:v2.1.0-upstream-v3.1.1\n",
+        );
+
+        // Write the updated content back to the file
+        fs::write(docker_compose_path, updated_content.as_ref()).await?;
+
         Ok(())
     }
 

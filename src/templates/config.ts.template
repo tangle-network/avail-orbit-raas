@@ -1,0 +1,31 @@
+import { ethers } from 'ethers'
+
+// 90% of Geth's 128KB tx size limit, leaving ~13KB for proving
+// This need to be adjusted for Orbit chains
+export const maxDataSize = 117964
+
+export const config = {
+  rollupConfig: {
+    confirmPeriodBlocks: ethers.BigNumber.from('${confirm_period_blocks}'),
+    extraChallengeTimeBlocks: ethers.BigNumber.from('${extra_challenge_time_blocks}'),
+    stakeToken: ethers.constants.AddressZero,
+    baseStake: ethers.utils.parseEther('${base_stake}'),
+    wasmModuleRoot: '${wasm_module_root}',
+    owner: '${owner}',
+    loserStakeEscrow: ethers.constants.AddressZero,
+    chainId: ethers.BigNumber.from('${chain_id}'),
+    chainConfig: '${chain_config}',
+    genesisBlockNum: ethers.BigNumber.from('${genesis_block_num}'),
+    sequencerInboxMaxTimeVariation: {
+      delayBlocks: ethers.BigNumber.from('${delay_blocks}'),
+      futureBlocks: ethers.BigNumber.from('${future_blocks}'),
+      delaySeconds: ethers.BigNumber.from('${delay_seconds}'),
+      futureSeconds: ethers.BigNumber.from('${future_seconds}'),
+    },
+  },
+  validators: [
+    '${validator_1}',
+    '${validator_2}'
+  ],
+  batchPoster: '${batch_poster}'
+}
