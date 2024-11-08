@@ -1,0 +1,55 @@
+[package]
+name = "avail-arbitrum-orbit-raas"
+version = "0.1.0"
+edition = "2021"
+description = "A Tangle Blueprint for deploying Arbitrum orbit chains using Avail DA"
+authors = ["Drew Stone <drewstone329@gmail.com>"]
+license = "MIT OR Apache-2.0"
+homepage = "https://tangle.tools"
+repository = "https://github.com/tangle-network/avail-arbitrum-orbit-raas"
+readme = "README.md"
+categories = ["cryptography", "cryptography::cryptocurrencies"]
+keywords = ["tangle", "blueprint", "avs"]
+rust-version = "1.81"
+
+[dependencies]
+tracing = "0.1"
+async-trait = "0.1"
+color-eyre = "0.6"
+structopt = "0.3.26"
+tokio = { version = "^1", default-features = false, features = ["full"] }
+tracing-subscriber = { version = "0.3", features = ["parking_lot", "env-filter"] }
+serde_json = "1.0.132"
+serde = { version = "1.0.214", features = ["derive"] }
+thiserror = "2.0.0"
+
+[features]
+default = ["std"]
+std = ["gadget-sdk/std"]
+
+[dependencies.gadget-sdk]
+version = "0.3.0"
+default-features = false
+features = ["getrandom"]
+
+[build-dependencies]
+blueprint-metadata = "0.1.6"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "avail-arbitrum-orbit-raas"
+path = "src/main.rs"
+
+[package.metadata.blueprint]
+manager = { Evm = "HelloBlueprint" }
+
+[[package.metadata.gadget.Native.sources]]
+owner = "tangle-network"
+repo = "avail-arbitrum-orbit-raas"
+tag = "0.1.0"
+binaries = [
+    { arch = "Amd64", os = "Linux", name = "amd64-linux-avail-arbitrum-orbit-raas-gadget" },
+    { arch = "Arm64", os = "Linux", name = "arm64-linux-avail-arbitrum-orbit-raas-gadget" },
+]
