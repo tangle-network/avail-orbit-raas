@@ -21,6 +21,6 @@
   "bridge": "${bridge}",
   "upgradeExecutor": "${upgrade_executor}",
   "validatorUtils": "${validator_utils}",
-  "validatorWalletCreator": "${validator_wallet_creator}",
+  "validatorWalletCreator": "${validator_wallet_staker}",
   "deployedAtBlockNumber": ${deployed_at_block_number}
 }

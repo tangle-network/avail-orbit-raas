@@ -6,7 +6,7 @@ use std::path::PathBuf;
 pub struct OrbitConfig {
     pub chain_id: u64,
     pub chain_name: String,
-    pub creator_address: Address,
+    pub staker_address: Address,
     pub private_key: String,
     pub rollup_config: RollupConfig,
     pub node_config: NodeConfig,
@@ -20,7 +20,7 @@ impl Default for OrbitConfig {
         Self {
             chain_id: 20121999,
             chain_name: "Avail-Orbit-Testnet".to_string(),
-            creator_address: Address::default(),
+            staker_address: Address::default(),
             private_key: "".to_string(), // Must be provided by user
             rollup_config: RollupConfig {
                 confirm_period_blocks: 150,
@@ -161,7 +161,7 @@ impl Default for OrbitConfig {
                 bridge: None,
                 upgrade_executor: None,
                 validator_utils: None,
-                validator_wallet_creator: None,
+                validator_wallet_staker: None,
                 deployed_at_block_number: None,
             },
             avail_config: AvailConfig {
@@ -341,7 +341,7 @@ pub struct OrbitSetupConfig {
     pub bridge: Option<String>,
     pub upgrade_executor: Option<String>,
     pub validator_utils: Option<String>,
-    pub validator_wallet_creator: Option<String>,
+    pub validator_wallet_staker: Option<String>,
     pub deployed_at_block_number: Option<u64>,
 }
 
@@ -359,7 +359,7 @@ impl OrbitConfig {
     pub fn new(
         chain_id: u64,
         chain_name: impl Into<String>,
-        creator_address: Address,
+        staker_address: Address,
         private_key: impl Into<String>,
         avail_config: AvailConfig,
         working_dir: impl Into<PathBuf>,
@@ -372,7 +372,7 @@ impl OrbitConfig {
             rollup_config: RollupConfig::default(chain_id),
             node_config: NodeConfig::default(),
             orbit_setup_config: OrbitSetupConfig::default(chain_id, &chain_name),
-            creator_address,
+            staker_address,
             avail_config,
             working_dir: working_dir.into(),
         }
@@ -502,7 +502,7 @@ impl OrbitSetupConfig {
             bridge: Some("0xC83ee8e28B7b258f41aF8ef4279c02f901288029".to_string()),
             upgrade_executor: Some("0x805bB07B88dDA56030eC48644E0C276e2e5E3949".to_string()),
             validator_utils: Some("0xB11EB62DD2B352886A4530A9106fE427844D515f".to_string()),
-            validator_wallet_creator: Some(
+            validator_wallet_staker: Some(
                 "0xEb9885B6c0e117D339F47585cC06a2765AaE2E0b".to_string(),
             ),
             deployed_at_block_number: Some(11274529),

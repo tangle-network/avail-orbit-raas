@@ -77,7 +77,7 @@ impl OrbitDeployment {
         // Create .env file and set the Rollup Creator Address
         let env_content = format!(
             "ROLLUP_CREATOR_ADDRESS=\"{}\"\nDEVNET_PRIVKEY=\"{}\"",
-            self.config.creator_address, self.config.private_key
+            self.config.staker_address, self.config.private_key
         );
         fs::write(nitro_contracts_dir.join(".env"), env_content).await?;
 
@@ -126,7 +126,7 @@ impl OrbitDeployment {
         let sequencer_inbox = extract_address("SequencerInbox (proxy) created at address:");
         let bridge = extract_address("Bridge (proxy) Contract created at address:");
         let validator_utils = extract_address("ValidatorUtils Contract created at address:");
-        let validator_wallet_creator =
+        let validator_wallet_staker =
             extract_address("ValidatorWalletCreator Contract created at address:");
 
         let deployed_block_number = output.get("deploy_rollup").and_then(|out| {
@@ -146,7 +146,7 @@ impl OrbitDeployment {
         self.config.orbit_setup_config.sequencer_inbox = sequencer_inbox;
         self.config.orbit_setup_config.bridge = bridge;
         self.config.orbit_setup_config.validator_utils = validator_utils;
-        self.config.orbit_setup_config.validator_wallet_creator = validator_wallet_creator;
+        self.config.orbit_setup_config.validator_wallet_staker = validator_wallet_staker;
         self.config.orbit_setup_config.deployed_at_block_number = deployed_block_number;
 
         Ok(())
@@ -316,10 +316,10 @@ impl OrbitDeployment {
                     .unwrap_or(&"".to_string()),
             )
             .replace(
-                "${validator_wallet_creator}",
+                "${validator_wallet_staker}",
                 self.config
                     .orbit_setup_config
-                    .validator_wallet_creator
+                    .validator_wallet_staker
                     .as_ref()
                     .unwrap_or(&"".to_string()),
             )
@@ -475,10 +475,10 @@ impl OrbitDeployment {
                     .unwrap_or(&"".to_string()),
             )
             .replace(
-                "${validator_wallet_creator}",
+                "${validator_wallet_staker}",
                 self.config
                     .orbit_setup_config
-                    .validator_wallet_creator
+                    .validator_wallet_staker
                     .as_ref()
                     .unwrap_or(&"".to_string()),
             )
