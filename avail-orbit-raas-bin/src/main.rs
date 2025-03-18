@@ -1,6 +1,7 @@
+use avail_orbit_raas_blueprint_lib::config::OperatorConfig;
+use avail_orbit_raas_blueprint_lib::types::RollupMetadata;
 use avail_orbit_raas_blueprint_lib::{
-    AvailOrbitConfig, DeploymentStatus, OperatorConfig, OrbitContext, RollupMetadata, deployment,
-    jobs, util,
+    DeploymentStatus, OperatorConfig, OrbitContext, deployment, jobs, util,
 };
 use axum::{Extension, Json, Router as AxumRouter, routing::get};
 use blueprint_sdk::Router;
