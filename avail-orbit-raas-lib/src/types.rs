@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Deployment status for the rollup
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct DeploymentStatus {
     /// Is the rollup deployed
     pub deployed: bool,
@@ -15,19 +15,8 @@ pub struct DeploymentStatus {
     pub container_ids: Vec<String>,
 }
 
-impl Default for DeploymentStatus {
-    fn default() -> Self {
-        Self {
-            deployed: false,
-            logs: Vec::new(),
-            metadata: None,
-            container_ids: Vec::new(),
-        }
-    }
-}
-
 /// Public metadata about the rollup - contains no private keys
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct RollupMetadata {
     /// Rollup name
     pub name: String,

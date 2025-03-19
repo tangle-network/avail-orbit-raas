@@ -1,10 +1,7 @@
-use avail_orbit_raas_blueprint_lib::config::OperatorConfig;
+use avail_orbit_raas_blueprint_lib::config::{AvailOrbitConfig, OperatorConfig};
 use avail_orbit_raas_blueprint_lib::types::RollupMetadata;
-use avail_orbit_raas_blueprint_lib::{
-    DeploymentStatus, OperatorConfig, OrbitContext, deployment, jobs, util,
-};
+use avail_orbit_raas_blueprint_lib::{DeploymentStatus, OrbitContext, deployment, jobs, util};
 use axum::{Extension, Json, Router as AxumRouter, routing::get};
-use blueprint_sdk::Router;
 use blueprint_sdk::contexts::tangle::TangleClientContext;
 use blueprint_sdk::crypto::sp_core::SpSr25519;
 use blueprint_sdk::crypto::tangle_pair_signer::TanglePairSigner;
@@ -16,6 +13,7 @@ use blueprint_sdk::tangle::consumer::TangleConsumer;
 use blueprint_sdk::tangle::filters::MatchesServiceId;
 use blueprint_sdk::tangle::layers::TangleLayer;
 use blueprint_sdk::tangle::producer::TangleProducer;
+use blueprint_sdk::{Job, Router};
 use dotenv::dotenv;
 use std::env;
 use std::net::SocketAddr;
@@ -133,17 +131,16 @@ async fn main() -> Result<(), blueprint_sdk::Error> {
 /// Load operator configuration from environment variables
 fn load_operator_config() -> Result<OperatorConfig, blueprint_sdk::Error> {
     let operator_config = OperatorConfig {
-        deployer_private_key: env::var("DEPLOYER_PRIVATE_KEY").map_err(|_| {
-            blueprint_sdk::Error::Custom("DEPLOYER_PRIVATE_KEY not set".to_string())
-        })?,
+        deployer_private_key: env::var("DEPLOYER_PRIVATE_KEY")
+            .map_err(|_| blueprint_sdk::Error::Other("DEPLOYER_PRIVATE_KEY not set".to_string()))?,
         batch_poster_private_key: env::var("BATCH_POSTER_PRIVATE_KEY").map_err(|_| {
-            blueprint_sdk::Error::Custom("BATCH_POSTER_PRIVATE_KEY not set".to_string())
+            blueprint_sdk::Error::Other("BATCH_POSTER_PRIVATE_KEY not set".to_string())
         })?,
         validator_private_key: env::var("VALIDATOR_PRIVATE_KEY").map_err(|_| {
-            blueprint_sdk::Error::Custom("VALIDATOR_PRIVATE_KEY not set".to_string())
+            blueprint_sdk::Error::Other("VALIDATOR_PRIVATE_KEY not set".to_string())
         })?,
         avail_addr_seed: env::var("AVAIL_ADDR_SEED")
-            .map_err(|_| blueprint_sdk::Error::Custom("AVAIL_ADDR_SEED not set".to_string()))?,
+            .map_err(|_| blueprint_sdk::Error::Other("AVAIL_ADDR_SEED not set".to_string()))?,
         fallback_s3_access_key: env::var("FALLBACKS3_ACCESS_KEY").ok(),
         fallback_s3_secret_key: env::var("FALLBACKS3_SECRET_KEY").ok(),
         fallback_s3_region: env::var("FALLBACKS3_REGION").ok(),
@@ -171,9 +168,9 @@ fn load_rollup_metadata() -> Result<RollupMetadata, blueprint_sdk::Error> {
         name: env::var("ROLLUP_NAME").unwrap_or_else(|_| "Avail Orbit Rollup".to_string()),
         chain_id,
         avail_app_id: env::var("AVAIL_APP_ID")
-            .map_err(|_| blueprint_sdk::Error::Custom("AVAIL_APP_ID not set".to_string()))?,
+            .map_err(|_| blueprint_sdk::Error::Other("AVAIL_APP_ID not set".to_string()))?,
         parent_chain_rpc: env::var("PARENT_CHAIN_RPC")
-            .map_err(|_| blueprint_sdk::Error::Custom("PARENT_CHAIN_RPC not set".to_string()))?,
+            .map_err(|_| blueprint_sdk::Error::Other("PARENT_CHAIN_RPC not set".to_string()))?,
         fallback_s3_enable,
         local_rpc_endpoint: env::var("ROLLUP_LOCAL_RPC")
             .unwrap_or_else(|_| "http://localhost:8449".to_string()),

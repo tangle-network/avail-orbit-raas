@@ -34,6 +34,7 @@ pub async fn modify_rollup_metadata(
 /// No private data is needed for this operation.
 pub async fn restart_rollup(
     Context(ctx): Context<OrbitContext>,
+    _: TangleArg<()>,
 ) -> Result<TangleResult<String>, blueprint_sdk::Error> {
     match restart_containers(&ctx).await {
         Ok(_) => Ok(TangleResult("Rollup successfully restarted".to_string())),
@@ -47,6 +48,7 @@ pub async fn restart_rollup(
 /// Private keys are managed by the operator and not exposed in job parameters.
 pub async fn update_bridge(
     Context(ctx): Context<OrbitContext>,
+    _: TangleArg<()>,
 ) -> Result<TangleResult<String>, blueprint_sdk::Error> {
     match update_rollup_bridge(&ctx).await {
         Ok(_) => Ok(TangleResult(

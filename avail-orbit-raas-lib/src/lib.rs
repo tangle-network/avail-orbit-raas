@@ -1,7 +1,5 @@
-use config::OperatorConfig;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use types::DeploymentStatus;
 
 // Module declarations
 pub mod config;
@@ -9,6 +7,9 @@ pub mod deployment;
 pub mod jobs;
 pub mod types;
 pub mod util;
+
+pub use config::*;
+pub use types::*;
 
 /// Rollup orchestration context
 #[derive(Clone)]
