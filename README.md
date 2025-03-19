@@ -70,8 +70,8 @@ Each example provides comprehensive debug logging for troubleshooting.
 
 The codebase is structured around:
 
-- **Core Library** (`avail-orbit-raas-lib`): The foundational API for rollup operations
-- **Binary** (`avail-orbit-raas-bin`): A CLI tool exposing core functionality
+- **Core Library** (`avail-orbit-raas-lib`): The library for rollup operations and deployments
+- **Binary** (`avail-orbit-raas-bin`): A Tangle Blueprint binary for operator use
 - **Blueprint Integration**: Integration with the Tangle ecosystem
 
 ## Prerequisites
