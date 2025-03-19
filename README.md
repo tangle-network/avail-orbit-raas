@@ -1,84 +1,106 @@
-# <h1 align="center">Hello World Tangle Blueprint 🌐</h1>
+# Avail Orbit RaaS
 
-## 📚 Overview
+A streamlined toolkit for deploying and managing Arbitrum Orbit rollups with Avail Data Availability.
 
-This Tangle Blueprint provides a simple Hello World job.
-Blueprints are specifications for <abbr title="Actively Validated Services">AVS</abbr>s on the Tangle Network. An AVS is
-an off-chain service that runs arbitrary computations for a user-specified period of time.
+## Overview
 
-Blueprints provide a useful abstraction, allowing developers to create reusable service infrastructures as if they were
-smart contracts. This enables developers to monetize their work and align long-term incentives with the success of their
-creations, benefiting proportionally to their Blueprint's usage.
+This repository provides a Rust-based implementation for deploying, managing, and interacting with Arbitrum Orbit rollups backed by Avail for Data Availability. It encapsulates the complex orchestration of rollup components into a simple, secure API.
 
-For more details, please refer to the [project documentation](https://docs.tangle.tools/developers/blueprints/introduction).
+## Core Features
 
-## 🚀 Features
+- **Secure Key Management**: Environment-based configuration system for sensitive keys
+- **Deployment Automation**: One-step rollup deployment with container orchestration
+- **Lifecycle Management**: Tools to restart and update your rollup instances
+- **Metadata Operations**: Seamlessly update rollup metadata post-deployment
+- **Blueprint Integration**: Exposed as a Blueprint library for wider ecosystem integration
 
-- Custom greeting messages
-- Default "Hello World!" messages
-- ...
-
-## 📋 Prerequisites
-
-Before you can run this project, you will need to have the following software installed on your machine:
-
-- [Rust](https://www.rust-lang.org/tools/install)
-- [Forge](https://getfoundry.sh)
-
-You will also need to install [cargo-tangle](https://crates.io/crates/cargo-tangle), our CLI tool for creating and
-deploying Tangle Blueprints:
-
-To install the Tangle CLI, run the following command:
-
-> Supported on Linux, MacOS, and Windows (WSL2)
+## Quick Start
 
 ```bash
-cargo install cargo-tangle --git https://github.com/tangle-network/blueprint
+# Clone the repository
+git clone https://github.com/your-org/avail-orbit-raas.git
+cd avail-orbit-raas
+
+# Configure your environment
+cp .env.example .env
+# Edit .env with your actual keys and configuration
+
+# Build the project
+cargo build --release
+
+# Try a deployment example
+cargo run --example deploy_rollup
 ```
 
-## ⭐ Getting Started
+## Configuration
 
-Once `cargo-tangle` is installed, you can create a new project with the following command:
+Configuration is managed through a `.env` file with the following key parameters:
 
-```sh
-cargo tangle blueprint create --name <project-name>
+```
+# Ethereum Private Keys (KEEP THESE SECURE)
+DEPLOYER_PRIVATE_KEY=0x...
+BATCH_POSTER_PRIVATE_KEY=0x...
+VALIDATOR_PRIVATE_KEY=0x...
+
+# Avail Data Availability Configuration
+AVAIL_ADDR_SEED=your-avail-secret-seed
+AVAIL_APP_ID=your-avail-app-id
+
+# Parent Chain Configuration
+PARENT_CHAIN_RPC=https://sepolia-rollup.arbitrum.io/rpc
+
+# Rollup Configuration
+ROLLUP_NAME=MyAvailOrbitRollup
+ROLLUP_CHAIN_ID=412346
 ```
 
-and follow the instructions to create a new project.
+See `.env.example` for the complete configuration reference.
 
-## 🛠️ Development
+## Usage Examples
 
-Once you have created a new project, you can run the following command to start the project:
+The repository includes executable examples demonstrating key functionality:
 
-```sh
-cargo build
+- **Deploying a Rollup**: `cargo run --example deploy_rollup`
+- **Restarting a Rollup**: `cargo run --example restart_rollup`
+- **Updating Metadata**: `cargo run --example update_metadata`
+
+Each example provides comprehensive debug logging for troubleshooting.
+
+## Architecture
+
+The codebase is structured around:
+
+- **Core Library** (`avail-orbit-raas-lib`): The foundational API for rollup operations
+- **Binary** (`avail-orbit-raas-bin`): A CLI tool exposing core functionality
+- **Blueprint Integration**: Integration with the Tangle ecosystem
+
+## Prerequisites
+
+- Rust toolchain (1.65+)
+- Docker and Docker Compose
+- Node.js and Yarn
+- ETH on Arbitrum Sepolia testnet (for deployment transactions)
+- An Avail account with DATA tokens
+
+## Development
+
+```bash
+# Run the tests
+cargo test
+
+# Run with debug logging
+RUST_LOG=debug cargo run --example deploy_rollup
+
+# Format code
+cargo fmt
 ```
 
-to build the project, and
+## Security Considerations
 
-```sh
-cargo tangle blueprint deploy
-```
+- Never commit `.env` files containing real private keys
+- Use environment variables or secure vaults in production
+- Review permissions of any containers running with private keys
 
-to deploy the blueprint to the Tangle network.
+## License
 
-## 📜 License
-
-Licensed under either of
-
-* Apache License, Version 2.0
-  ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
-* MIT license
-  ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
-
-at your option.
-
-## 📬 Feedback and Contributions
-
-We welcome feedback and contributions to improve this blueprint.
-Please open an issue or submit a pull request on our GitHub repository.
-Please let us know if you fork this blueprint and extend it too!
-
-Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
-dual licensed as above, without any additional terms or conditions.
+[MIT License](LICENSE) and [Apache License 2.0](LICENSE-APACHE)

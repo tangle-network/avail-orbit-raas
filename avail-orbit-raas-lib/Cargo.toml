@@ -20,8 +20,23 @@ tracing = { workspace = true }
 
 [dev-dependencies]
 blueprint-sdk = { workspace = true, features = ["testing", "tangle"] }
-tokio = { workspace = true, features = ["macros", "rt"] }
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread"] }
 color-eyre = { workspace = true }
+dotenv = { workspace = true }
+tracing-subscriber = { workspace = true }
+chrono = "0.4.31"
+
+[[example]]
+name = "deploy_rollup"
+path = "examples/deploy_rollup.rs"
+
+[[example]]
+name = "restart_rollup"
+path = "examples/restart_rollup.rs"
+
+[[example]]
+name = "update_metadata"
+path = "examples/update_metadata.rs"
 
 [package.metadata.blueprint]
 manager = { Evm = "ExperimentalBlueprint" }
