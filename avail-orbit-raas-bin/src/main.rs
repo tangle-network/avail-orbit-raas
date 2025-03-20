@@ -224,12 +224,10 @@ async fn start_http_server(state: AppState) {
         .layer(Extension(state.deployment_status));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     info!("HTTP server listening on {}", addr);
 
-    match axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-    {
+    match axum::serve(listener, app).await {
         Ok(_) => {}
         Err(e) => error!("HTTP server error: {}", e),
     }

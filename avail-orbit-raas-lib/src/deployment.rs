@@ -149,7 +149,18 @@ async fn deploy_contracts(status: &mut DeploymentStatus) -> Result<(), String> {
         DEPLOYMENT_DIR
     );
 
-    let deploy_result = TokioCommand::new("npm")
+    // Install dependencies
+    let install_result = TokioCommand::new("yarn")
+        .current_dir(&rollup_dir)
+        .arg("install")
+        .output()
+        .await;
+
+    if let Err(e) = install_result {
+        return Err(format!("Failed to install dependencies: {}", e));
+    }
+
+    let deploy_result = TokioCommand::new("yarn")
         .current_dir(&rollup_dir)
         .arg("run")
         .arg("deploy-avail-orbit-rollup")
@@ -204,8 +215,9 @@ async fn setup_and_start_chain(status: &mut DeploymentStatus) -> Result<(), Stri
     }
 
     // Start the chain
-    let start_result = TokioCommand::new("docker-compose")
+    let start_result = TokioCommand::new("docker")
         .current_dir(&setup_dir)
+        .arg("compose")
         .arg("up")
         .arg("-d")
         .output()
@@ -216,8 +228,9 @@ async fn setup_and_start_chain(status: &mut DeploymentStatus) -> Result<(), Stri
     }
 
     // Get container IDs
-    let containers_result = TokioCommand::new("docker-compose")
+    let containers_result = TokioCommand::new("docker")
         .current_dir(&setup_dir)
+        .arg("compose")
         .args(["ps", "-q"])
         .output()
         .await;
@@ -298,8 +311,9 @@ pub async fn restart_containers(context: &crate::OrbitContext) -> Result<(), Str
 
     // Start containers again
     let setup_dir = format!("{}/orbit-setup-script", DEPLOYMENT_DIR);
-    let start_result = std::process::Command::new("docker-compose")
+    let start_result = std::process::Command::new("docker")
         .current_dir(setup_dir)
+        .arg("compose")
         .arg("up")
         .arg("-d")
         .output();
